@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en" data-bs-theme="{{ theme }}">
+
+<head>
+    <title>Mini Cloud</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 60px;
+            background-color: {% if theme == 'dark' %} #121212; {% else %} #fff; {% endif %}
+            color: {% if theme == 'dark' %} #e0e0e0; {% else %} #212529; {% endif %}
+        }
+
+        /* Breadcrumb container below navbar */
+        .breadcrumb-container {
+            background: {% if theme == 'dark' %} #1f2a38; {% else %} #f8f9fa; {% endif %};
+            padding: 0.5rem 1rem;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: 0 auto 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Customize breadcrumb style */
+        .breadcrumb {
+            background: transparent !important;
+            margin-bottom: 0;
+            padding: 0;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "→";
+            color: #0d6efd;
+            margin: 0 8px;
+            font-weight: 700;
+        }
+
+        .breadcrumb-item a {
+            color: #0d6efd;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .breadcrumb-item a:hover {
+            color: #6ea8fe;
+            text-decoration: underline;
+        }
+
+        .breadcrumb-item.active {
+            color: #fd7e14; /* Bootstrap orange */
+            user-select: text;
+        }
+
+        /* Page title style */
+        h2.page-title {
+            max-width: 900px;
+            margin: 0 auto 1.5rem;
+            font-weight: 700;
+            font-size: 1.8rem;
+            color: {% if theme == 'dark' %} #f8f9fa; {% else %} #212529; {% endif %}
+        }
+
+        /* Maintain existing preview styling */
+        .preview-img {
+            max-width: 100px;
+            max-height: 100px;
+        }
+
+        .preview-text {
+            background-color: {% if theme == 'dark' %} #2c3e50; {% else %} #f8f9fa; {% endif %};
+            padding: 10px;
+            max-height: 100px;
+            overflow: auto;
+            color: {% if theme == 'dark' %} #d1d8e0; {% else %} #212529; {% endif %};
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body class="container">
+    <nav class="navbar fixed-top navbar-expand-lg
+      {% if theme == 'dark' %}
+        navbar-dark bg-dark
+      {% else %}
+        navbar-light bg-light
+      {% endif %}
+    ">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Mini Cloud</a>
+
+            <form method="GET" class="d-flex ms-auto me-2" action="{{ url_for('index') }}">
+                <input class="form-control me-2" type="search" placeholder="Search" name="search"
+                    value="{{ request.args.get('search', '') }}">
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+            </form>
+            <button class="btn btn-outline-secondary" onclick="window.location.href='{{ url_for('toggle_theme') }}'">Toggle Theme</button>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb below navbar -->
+    <nav aria-label="breadcrumb" class="breadcrumb-container" role="navigation">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
+            {% if current_path %}
+            {% set parts = current_path.split('/') %}
+            {% set accumulated_path = [] %}
+            {% for part in parts %}
+            {% set _ = accumulated_path.append(part) %}
+            {% if loop.last %}
+            <li class="breadcrumb-item active" aria-current="page">{{ part }}</li>
+            {% else %}
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index', req_path='/'.join(accumulated_path)) }}">{{ part }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+        </ol>
+    </nav>
+
+    <!-- Page title below breadcrumb -->
+    <h2 class="page-title">📁 Simple Flask Cloud</h2>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="alert alert-info" role="alert" style="max-width:900px; margin: 0 auto 1.5rem;">
+        {% for message in messages %}
+        <div>{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if used and total %}
+    <p class="text-muted" style="max-width:900px; margin: 0 auto 1rem;">💽 Storage Used: {{ (used / (1024**3)) | round(2) }} GB / {{ (total / (1024**3)) | round(2) }} GB</p>
+    {% endif %}
+
+    <!-- ... rest of your content ... -->
+
+    <form method="POST" action="/mkdir" class="mb-3" style="max-width:900px; margin: 0 auto;">
+        <input type="hidden" name="path" value="{{ current_path }}">
+        <div class="input-group">
+            <input name="foldername" class="form-control" placeholder="New folder name" required>
+            <button type="submit" class="btn btn-primary">Create Folder</button>
+        </div>
+    </form>
+
+    <form method="POST" action="/upload" enctype="multipart/form-data" class="mb-3" style="max-width:900px; margin: 0 auto;">
+        <input type="hidden" name="path" value="{{ current_path }}">
+        <div class="input-group">
+            <input type="file" name="files" multiple class="form-control" required>
+            <button type="submit" class="btn btn-success">Upload</button>
+        </div>
+    </form>
+
+    <form method="POST" action="/action" style="max-width:900px; margin: 0 auto;">
+        <input type="hidden" name="path" value="{{ current_path }}">
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="selectAll">
+            <label class="form-check-label" for="selectAll">Select All</label>
+        </div>
+        <ul class="list-group mb-3">
+            {% for folder in folders %}
+            <li class="list-group-item">
+                <input type="checkbox" name="selected" value="{{ folder }}">
+                <i class="fas fa-folder text-warning"></i>
+                <a href="{{ url_for('index', req_path=(current_path + '/' if current_path else '') + folder) }}">{{ folder }}</a>
+            </li>
+            {% endfor %}
+            {% for file in files %}
+            <li class="list-group-item">
+                <input type="checkbox" name="selected" value="{{ file }}">
+                {% set ext = file.split('.')[-1].lower() %}
+                {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+                <i class="fas fa-file-image text-info"></i>
+                {% elif ext in ['pdf'] %}
+                <i class="fas fa-file-pdf text-danger"></i>
+                {% elif ext in ['txt', 'md'] %}
+                <i class="fas fa-file-alt text-secondary"></i>
+                {% elif ext in ['xlsx', 'xls'] %}
+                <i class="fas fa-file-excel text-success"></i>
+                {% elif ext in ['docx', 'doc'] %}
+                <i class="fas fa-file-word text-primary"></i>
+                {% else %}
+                <i class="fas fa-file text-muted"></i>
+                {% endif %}
+                {{ file }}
+                {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+                <br><img src="{{ url_for('serve_files', filename=(current_path + '/' + file)) }}" class="preview-img">
+                {% elif ext in ['txt', 'md'] %}
+                <pre class="preview-text">
+              {{ open(BASE_DIR + '/' + current_path + '/' + file).read()[:500] }}
+            </pre>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="d-flex gap-2">
+            <button type="submit" name="action_type" value="download" class="btn btn-warning">Download Selected</button>
+            <button type="submit" name="action_type" value="delete" class="btn btn-danger">Delete Selected</button>
+        </div>
+    </form>
+
+    <script>
+        document.getElementById('selectAll').addEventListener('change', function () {
+            let checkboxes = document.querySelectorAll('input[name="selected"]');
+            checkboxes.forEach(chk => chk.checked = this.checked);
+        });
+    </script>
+</body>
+
+</html>
